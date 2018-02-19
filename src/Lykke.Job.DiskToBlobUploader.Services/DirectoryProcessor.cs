@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Globalization;
 using System.Collections.Generic;
 using System.IO;
@@ -10,8 +11,6 @@ namespace Lykke.Job.DiskToBlobUploader.Services
 {
     public class DirectoryProcessor : IDirectoryProcessor
     {
-        private const string _storageTimeFormat = "yyyy-MM-dd-HH";
-
         private readonly IBlobSaver _blobSaver;
         private readonly ILog _log;
         private readonly string _directoryPath;
@@ -39,43 +38,54 @@ namespace Lykke.Job.DiskToBlobUploader.Services
 
         public async Task ProcessDirectoryAsync()
         {
+            var dirs = Directory.GetDirectories(_directoryPath, "*", SearchOption.TopDirectoryOnly);
+            if (dirs.Length <= 1)
+                return;
+
+            var dirsToProcess = dirs.OrderBy(i => i).ToList();
+
             try
             {
-                var files = Directory.EnumerateFiles(_directoryPath, "*", SearchOption.TopDirectoryOnly);
-
-                var messages = new List<string>();
-                int filesCount = 0;
-                DateTime minDate = DateTime.UtcNow;
-                foreach (var file in files)
+                for (int i = 0; i < dirsToProcess.Count - 1; ++i)
                 {
-                    DateTime fileTime = GetTimeFromFileName(file);
-                    if (minDate > fileTime)
-                        minDate = fileTime;
-                    using (var sr = File.OpenText(file))
+                    string dir = dirsToProcess[i];
+
+                    var files = Directory.EnumerateFiles(dir, "*", SearchOption.TopDirectoryOnly);
+
+                    var messages = new List<string>();
+                    int filesCount = 0;
+                    DateTime minDate = DateTime.UtcNow;
+                    foreach (var file in files)
                     {
-                        do
+                        DateTime fileTime = GetTimeFromFileName(file);
+                        if (minDate > fileTime)
+                            minDate = fileTime;
+                        using (var sr = File.OpenText(file))
                         {
-                            var str = sr.ReadLine();
-                            if (str == null)
-                                break;
-                            messages.Add(str);
-                        } while (true);
+                            do
+                            {
+                                var str = sr.ReadLine();
+                                if (str == null)
+                                    break;
+                                messages.Add(str);
+                            } while (true);
+                        }
+                        ++filesCount;
                     }
-                    ++filesCount;
+
+                    string storagePath = Path.GetFileName(dir);
+                    await _blobSaver.SaveToBlobAsync(messages, storagePath);
+
+                    foreach (var file in files)
+                    {
+                        File.Delete(file);
+                    }
+
+                    await _log.WriteInfoAsync(
+                        nameof(DirectoryProcessor),
+                        nameof(ProcessDirectoryAsync),
+                        $"Uploaded and deleted {filesCount} files for {_directory}/{storagePath}");
                 }
-
-                string storagePath = minDate.ToString(_storageTimeFormat);
-                await _blobSaver.SaveToBlobAsync(messages, storagePath);
-
-                foreach (var file in files)
-                {
-                    File.Delete(file);
-                }
-
-                await _log.WriteInfoAsync(
-                    nameof(DirectoryProcessor),
-                    nameof(ProcessDirectoryAsync),
-                    $"Uploaded and deleted {filesCount} files for {_directory}");
             }
             catch (Exception ex)
             {
