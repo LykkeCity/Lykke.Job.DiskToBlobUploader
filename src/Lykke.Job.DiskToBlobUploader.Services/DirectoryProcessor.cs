@@ -52,7 +52,7 @@ namespace Lykke.Job.DiskToBlobUploader.Services
 
                     var files = Directory.EnumerateFiles(dir, "*", SearchOption.TopDirectoryOnly);
 
-                    var messages = new List<string>();
+                    var messages = new List<byte[]>();
                     int filesCount = 0;
                     DateTime minDate = DateTime.UtcNow;
                     foreach (var file in files)
@@ -60,16 +60,8 @@ namespace Lykke.Job.DiskToBlobUploader.Services
                         DateTime fileTime = GetTimeFromFileName(file);
                         if (minDate > fileTime)
                             minDate = fileTime;
-                        using (var sr = File.OpenText(file))
-                        {
-                            do
-                            {
-                                var str = sr.ReadLine();
-                                if (str == null)
-                                    break;
-                                messages.Add(str);
-                            } while (true);
-                        }
+                        var fileBytes = await File.ReadAllBytesAsync(file);
+                        messages.Add(fileBytes);
                         ++filesCount;
                     }
 

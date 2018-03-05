@@ -16,6 +16,7 @@ namespace Lykke.Job.DiskToBlobUploader.Services
         {
             MaximumExecutionTime = TimeSpan.FromMinutes(15),
         };
+        private readonly byte[] _eolBytes = Encoding.UTF8.GetBytes("\r\n");
 
         private DateTime _lastBatchSave = DateTime.MinValue;
 
@@ -34,22 +35,19 @@ namespace Lykke.Job.DiskToBlobUploader.Services
                     .GetAwaiter().GetResult();
         }
 
-        public async Task SaveToBlobAsync(IEnumerable<string> blocks, string storagePath)
+        public async Task SaveToBlobAsync(IEnumerable<byte[]> blocks, string storagePath)
         {
             var blob = await InitBlobAsync(storagePath);
 
             using (var stream = new MemoryStream())
             {
-                using (var writer = new StreamWriter(stream))
+                foreach (var block in blocks)
                 {
-                    foreach (var block in blocks)
-                    {
-                        writer.WriteLine(block);
-                    }
-                    writer.Flush();
-                    stream.Position = 0;
-                    await blob.AppendFromStreamAsync(stream, null, _blobRequestOptions, null);
+                    stream.Write(block, 0, block.Length);
+                    stream.Write(_eolBytes, 0, _eolBytes.Length);
                 }
+                stream.Position = 0;
+                await blob.AppendFromStreamAsync(stream, null, _blobRequestOptions, null);
             }
         }
 
