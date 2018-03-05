@@ -16,7 +16,7 @@ namespace Lykke.Job.DiskToBlobUploader.Services
         {
             MaximumExecutionTime = TimeSpan.FromMinutes(15),
         };
-        private readonly byte[] _eolBytes = Encoding.UTF8.GetBytes("\r\n");
+        private readonly byte[] _eolBytes = Encoding.UTF8.GetBytes("\r\n\r\n");
 
         private DateTime _lastBatchSave = DateTime.MinValue;
 
