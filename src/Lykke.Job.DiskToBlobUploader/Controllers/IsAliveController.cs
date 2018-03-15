@@ -1,9 +1,9 @@
 ﻿using System.Linq;
 using System.Net;
-using Lykke.Job.DiskToBlobUploader.Core.Services;
-using Lykke.Job.DiskToBlobUploader.Models;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using Lykke.Common.Api.Contract.Responses;
+using Lykke.Job.DiskToBlobUploader.Core.Services;
 
 namespace Lykke.Job.DiskToBlobUploader.Controllers
 {

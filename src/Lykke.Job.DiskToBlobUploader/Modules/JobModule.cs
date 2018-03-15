@@ -1,5 +1,6 @@
 ﻿using Autofac;
 using Common.Log;
+using Lykke.Common;
 using Lykke.Job.DiskToBlobUploader.Core.Services;
 using Lykke.Job.DiskToBlobUploader.Settings;
 using Lykke.Job.DiskToBlobUploader.Services;
@@ -33,6 +34,8 @@ namespace Lykke.Job.DiskToBlobUploader.Modules
 
             builder.RegisterType<ShutdownManager>()
                 .As<IShutdownManager>();
+
+            builder.RegisterResourcesMonitoring(_log);
 
             builder.RegisterType<BlobSaver>()
                 .As<IBlobSaver>()
